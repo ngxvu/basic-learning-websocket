@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"log"
-	"math/rand"
 	"net/http"
-	"time"
 )
 
 var upgrader = websocket.Upgrader{
@@ -32,15 +30,7 @@ type Client struct {
 }
 
 type Message struct {
-	ID         int         `json:"id"`
-	Body       string      `json:"body"`
-	OwnerCarID int         `json:"owner_car_id"`
-	PreOrderID int         `json:"pre_order_id"`
-	ListTruck  []ListTruck `json:"list_truck"`
-}
-
-type ListTruck struct {
-	TruckCarID int `json:"truck_car_id"`
+	Body []byte
 }
 
 type Pool struct {
@@ -66,12 +56,12 @@ func (c *Client) Read() {
 	}()
 
 	for {
-		messageType, p, err := c.Conn.ReadMessage()
+		_, p, err := c.Conn.ReadMessage()
 		if err != nil {
 			log.Println(err)
 			return
 		}
-		message := Message{ID: messageType, Body: string(p)}
+		message := Message{Body: p}
 		c.Pool.Broadcast <- message
 		fmt.Printf("Message Received: %+v\n", message)
 	}
@@ -85,7 +75,7 @@ func (pool *Pool) Start() {
 			fmt.Println("Size of Connection Pool: ", len(pool.Clients))
 			for client, _ := range pool.Clients {
 				fmt.Println(client)
-				client.Conn.WriteJSON(Message{ID: 1, Body: "New User Joined..."})
+				client.Conn.WriteJSON(Message{Body: nil})
 			}
 			break
 		case client := <-pool.Unregister:
@@ -93,7 +83,7 @@ func (pool *Pool) Start() {
 			fmt.Println("Size of Connection Pool: ", len(pool.Clients))
 			for client, _ := range pool.Clients {
 				fmt.Println(client)
-				client.Conn.WriteJSON(Message{ID: 1, Body: "User Disconnected..."})
+				client.Conn.WriteJSON(Message{Body: nil})
 			}
 			break
 		case message := <-pool.Broadcast:
@@ -108,16 +98,16 @@ func (pool *Pool) Start() {
 	}
 }
 
-func websocketRandPing(conn *websocket.Conn) {
-	for {
-		err := conn.WriteMessage(websocket.TextMessage, []byte("randping"))
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		time.Sleep(time.Duration(rand.Intn(int(time.Second * 3))))
-	}
-}
+//func websocketRandPing(conn *websocket.Conn) {
+//	for {
+//		err := conn.WriteMessage(websocket.TextMessage, []byte("randping"))
+//		if err != nil {
+//			log.Println(err)
+//			return
+//		}
+//		time.Sleep(time.Duration(rand.Intn(int(time.Second * 3))))
+//	}
+//}
 
 func serveWs(pool *Pool, w http.ResponseWriter, r *http.Request) {
 	fmt.Println("WebSocket Endpoint Hit")
@@ -132,7 +122,7 @@ func serveWs(pool *Pool, w http.ResponseWriter, r *http.Request) {
 	}
 
 	pool.Register <- client
-	go websocketRandPing(conn)
+	//go websocketRandPing(conn)
 	client.Read()
 }
 

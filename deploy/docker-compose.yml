@@ -1,0 +1,9 @@
+version: '2.2'
+services:
+  gosocket-hkn:
+    container_name: gosocket-hkn
+    image: "ngxvu/gosocket:1.0.0"
+    hostname: gosocket
+    restart: always
+    ports:
+      - "8081:8081"
