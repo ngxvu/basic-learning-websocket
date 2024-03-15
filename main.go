@@ -146,5 +146,5 @@ func setupRoutes() {
 
 func main() {
 	setupRoutes()
-	http.ListenAndServe("localhost:8081", nil)
+	http.ListenAndServe(":8081", nil)
 }
